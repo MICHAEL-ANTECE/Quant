@@ -1,0 +1,1329 @@
+<title>市场风险驾驶舱 · Market Risk Cockpit</title>
+<style>
+  :root {
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
+    --font-data: ui-monospace, "SF Mono", "JetBrains Mono", "Menlo", "Consolas", monospace;
+
+    --bg: #0E1116;
+    --panel: #161B22;
+    --panel-2: #1B222C;
+    --raise: #212A35;
+    --border: #2A323D;
+    --border-soft: #222932;
+    --text: #E7EBF1;
+    --muted: #8B95A5;
+    --faint: #5E6875;
+
+    --accent: #E0A82E;
+    --accent-dim: #a67e22;
+
+    --l1: #3E6DB5;
+    --l2: #6E9BD1;
+    --l3: #99A2B1;
+    --l4: #E0A82E;
+    --l5: #E4772E;
+
+    --risk-low: #3FA76A;
+    --risk-mid: #E0A82E;
+    --risk-high: #D2503A;
+
+    /* 风险 1→5 渐变：绿 → 黄绿 → 琥珀 → 橙 → 红 */
+    --r1: #3FA76A;
+    --r2: #8AAE3C;
+    --r3: #E0A82E;
+    --r4: #DC7A32;
+    --r5: #D2503A;
+
+    --pos: #3FA76A;
+    --neg: #4E8DD6;
+    --shadow: 0 1px 0 rgba(255,255,255,.02), 0 8px 24px -12px rgba(0,0,0,.6);
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg:#EEF1F5; --panel:#FFFFFF; --panel-2:#F6F8FB; --raise:#EDF1F6;
+      --border:#DBE1EA; --border-soft:#E6EBF1; --text:#1A1F27; --muted:#5B6675; --faint:#93a0b0;
+      --accent:#B77F10; --accent-dim:#caa347;
+      --shadow: 0 1px 2px rgba(20,30,50,.04), 0 12px 28px -16px rgba(30,45,70,.28);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0E1116; --panel:#161B22; --panel-2:#1B222C; --raise:#212A35;
+    --border:#2A323D; --border-soft:#222932; --text:#E7EBF1; --muted:#8B95A5; --faint:#5E6875;
+    --accent:#E0A82E; --accent-dim:#a67e22;
+    --shadow: 0 1px 0 rgba(255,255,255,.02), 0 8px 24px -12px rgba(0,0,0,.6);
+  }
+  :root[data-theme="light"]{
+    --bg:#EEF1F5; --panel:#FFFFFF; --panel-2:#F6F8FB; --raise:#EDF1F6;
+    --border:#DBE1EA; --border-soft:#E6EBF1; --text:#1A1F27; --muted:#5B6675; --faint:#93a0b0;
+    --accent:#B77F10; --accent-dim:#caa347;
+    --shadow: 0 1px 2px rgba(20,30,50,.04), 0 12px 28px -16px rgba(30,45,70,.28);
+  }
+
+  * { box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--text); font-family:var(--font-sans); line-height:1.5; -webkit-font-smoothing:antialiased; }
+  .wrap{ max-width:1180px; margin:0 auto; padding:26px 20px 64px; }
+  .mono{ font-family:var(--font-data); font-variant-numeric:tabular-nums; }
+  h1,h2{ text-wrap:balance; margin:0; }
+  a{ color:var(--accent); text-decoration:none; }
+  a:hover{ text-decoration:underline; }
+  a:focus-visible, button:focus-visible, input:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+  header.top{ display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:14px; }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand .dot{ width:12px;height:12px;border-radius:50%;background:var(--accent); box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent); }
+  .brand h1{ font-size:21px; font-weight:750; letter-spacing:-.01em; }
+  .brand .en{ color:var(--muted); font-weight:500; font-size:12px; letter-spacing:.16em; text-transform:uppercase; }
+  .meta{ display:flex; align-items:center; gap:12px; color:var(--muted); font-size:12.5px; }
+  .themebtn{ font:inherit; font-size:12px; color:var(--muted); cursor:pointer; background:var(--panel); border:1px solid var(--border); border-radius:7px; padding:5px 10px; }
+  .themebtn:hover{ color:var(--text); border-color:var(--accent); }
+
+  /* provenance strip — 数据来源与生成时间，永远显式可见 */
+  .prov{
+    display:flex; flex-wrap:wrap; align-items:center; gap:8px 18px;
+    border:1px solid var(--border); border-left:3px solid var(--pos);
+    background:var(--panel); border-radius:10px; padding:10px 14px; margin-bottom:18px;
+    font-size:12px; color:var(--muted);
+  }
+  .prov b{ color:var(--text); font-weight:640; }
+  .prov .sep{ color:var(--faint); }
+
+  .card{ background:var(--panel); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); }
+  .eyebrow{ font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); font-weight:650; }
+
+  /* ---------- 顶部实时行情条 ---------- */
+  .tickerwrap{ margin-bottom:16px; }
+  .tickers{ display:grid; grid-template-columns:repeat(6,1fr); gap:9px; }
+  .tk{
+    background:var(--panel); border:1px solid var(--border); border-radius:10px;
+    padding:10px 12px; display:flex; flex-direction:column; gap:3px; box-shadow:var(--shadow);
+  }
+  .tk .sym{ font-family:var(--font-data); font-size:11.5px; font-weight:700; letter-spacing:.02em; }
+  .tk .px{ font-family:var(--font-data); font-size:19px; font-weight:700; line-height:1.05; letter-spacing:-.01em; }
+  .tk .ch{ font-family:var(--font-data); font-size:11.5px; font-weight:650; }
+  .tk .ds{ font-size:9.5px; color:var(--faint); }
+  .up{ color:var(--pos); }
+  .down{ color:var(--risk-high); }
+  .flat{ color:var(--muted); }
+
+  /* 油价 + 美债曲线 */
+  .macrorow{ display:grid; grid-template-columns:minmax(220px,1fr) 2.1fr; gap:9px; margin-top:9px; }
+  .oilbox, .curvebox{
+    background:var(--panel); border:1px solid var(--border); border-radius:10px;
+    padding:11px 13px; box-shadow:var(--shadow);
+  }
+  .oilrow{ display:flex; gap:18px; margin-top:7px; }
+  .oilrow .o{ display:flex; flex-direction:column; gap:1px; }
+  .oilrow .on{ font-size:10px; color:var(--muted); }
+  .oilrow .ov{ font-family:var(--font-data); font-size:20px; font-weight:700; line-height:1; }
+  .curve{ display:flex; gap:3px; margin-top:8px; align-items:flex-end; overflow-x:auto; }
+  .curve .c{ flex:1; min-width:34px; display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .curve .cy{ font-family:var(--font-data); font-size:11.5px; font-weight:700; white-space:nowrap; }
+  .curve .cb{ width:100%; border-radius:2px 2px 0 0; min-height:2px; }
+  .curve .ct{ font-size:9.5px; color:var(--muted); white-space:nowrap; }
+  .curve .cd{ font-size:8.5px; color:var(--faint); font-family:var(--font-data); }
+
+  /* ---------- 恐慌贪婪指数 ---------- */
+  .fgcard{ padding:20px 24px; margin-bottom:16px; }
+  .fgtop{ display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap; }
+  .fgmain{ display:flex; align-items:baseline; gap:14px; }
+  .fgnum{ font-family:var(--font-data); font-size:56px; font-weight:700; line-height:.9; letter-spacing:-.02em; }
+  .fgzone{ font-size:24px; font-weight:760; letter-spacing:-.01em; }
+  .fgof{ font-family:var(--font-data); font-size:15px; color:var(--faint); }
+  .fgref{ text-align:right; font-size:11.5px; color:var(--muted); line-height:1.6; }
+  .fgref b{ font-family:var(--font-data); color:var(--text); font-size:15px; }
+
+  /* 0–100 渐变刻度：恐慌(冷) → 贪婪(暖) */
+  .fgscale{ position:relative; margin:18px 0 6px; }
+  .fgscale .bar{
+    height:13px; border-radius:7px;
+    background:linear-gradient(90deg,
+      var(--l1) 0%, var(--l2) 27%, var(--l3) 50%, var(--l4) 73%, var(--l5) 100%);
+  }
+  .fgscale .pin{
+    position:absolute; top:-7px; transform:translateX(-50%);
+    width:0;height:0; border-left:7px solid transparent; border-right:7px solid transparent;
+    border-top:10px solid var(--text); filter:drop-shadow(0 1px 1px rgba(0,0,0,.35));
+    transition:left .5s cubic-bezier(.5,.05,.2,1);
+  }
+  .fgscale .cnnpin{
+    position:absolute; top:15px; transform:translateX(-50%);
+    width:2px; height:9px; background:var(--muted); border-radius:1px;
+  }
+  .fgscale .cnnlbl{
+    position:absolute; top:25px; transform:translateX(-50%);
+    font-size:9.5px; color:var(--muted); white-space:nowrap; font-family:var(--font-data);
+  }
+  .fgticks{ display:flex; justify-content:space-between; margin-top:7px; font-size:10px; color:var(--faint); }
+
+  .fgcomps{ display:grid; grid-template-columns:repeat(5,1fr); gap:9px; margin-top:26px; }
+  .fgcomp{
+    background:var(--panel-2); border:1px solid var(--border-soft);
+    border-radius:9px; padding:10px 11px; display:flex; flex-direction:column; gap:6px;
+  }
+  .fgcomp .cn{ font-size:11.5px; font-weight:650; }
+  .fgcomp .cv{ font-family:var(--font-data); font-size:19px; font-weight:700; line-height:1; }
+  .fgcomp .cbar{ height:3px; border-radius:3px; background:var(--raise); overflow:hidden; }
+  .fgcomp .cbar i{ display:block; height:100%; }
+  .fgcomp .cd{ font-size:10px; color:var(--faint); line-height:1.45; }
+
+  .hero{ display:grid; grid-template-columns:1.35fr 1fr; gap:16px; margin-bottom:16px; }
+  .verdict{ padding:22px 24px; display:flex; flex-direction:column; gap:15px; }
+  .lvl-badge{ display:inline-flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+  .lvl-num{ font-family:var(--font-data); font-size:60px; line-height:.9; font-weight:700; letter-spacing:-.02em; }
+  .lvl-of{ color:var(--faint); font-size:20px; font-family:var(--font-data); }
+  .lvl-label{ font-size:26px; font-weight:760; letter-spacing:-.01em; }
+  .lvl-sub{ color:var(--muted); font-size:13.5px; max-width:48ch; }
+
+  /* 连续色彩渐变：冷蓝(极度看空) → 灰(中性) → 金/橙(强烈看多) */
+  .meter .track{
+    position:relative; height:15px; border-radius:8px;
+    background:linear-gradient(90deg,
+      var(--l1) 0%, var(--l2) 25%, var(--l3) 50%, var(--l4) 75%, var(--l5) 100%);
+  }
+  /* 当前档位之外压暗，让渐变与"落在哪一档"同时可读 */
+  .meter .track .dim{
+    position:absolute; top:0; bottom:0; background:var(--panel);
+    opacity:.62; transition:left .4s, right .4s;
+  }
+  .meter .track .dim.l{ left:0; }
+  .meter .track .dim.r{ right:0; }
+  .meter .marker{ position:absolute; top:-6px; transform:translateX(-50%); width:0;height:0;
+    border-left:7px solid transparent; border-right:7px solid transparent; border-top:9px solid var(--text);
+    transition:left .45s cubic-bezier(.5,.05,.2,1); filter:drop-shadow(0 1px 1px rgba(0,0,0,.4)); }
+  .meter .scale{ display:flex; justify-content:space-between; margin-top:8px; color:var(--faint); font-size:10.5px; font-family:var(--font-data); }
+
+  .spark{ margin-top:2px; }
+  .spark svg{ display:block; width:100%; height:52px; }
+  .sparkcap{ display:flex; justify-content:space-between; font-size:11px; color:var(--faint); margin-top:4px; }
+
+  .riskcard{ padding:20px 22px; display:flex; flex-direction:column; gap:13px; }
+  .riskcard .top{ display:flex; align-items:center; justify-content:space-between; }
+  .risk-dots{ display:flex; gap:6px; }
+  .risk-dots i{ height:9px; border-radius:3px; background:var(--raise); flex:1; }
+  .risk-headline{ display:flex; align-items:baseline; gap:10px; }
+  .risk-headline .n{ font-family:var(--font-data); font-size:40px; font-weight:700; line-height:1; }
+  .risk-headline .t{ font-size:18px; font-weight:720; }
+  .risk-note{ color:var(--muted); font-size:12.5px; }
+  .risk-kv{ display:grid; grid-template-columns:1fr auto; gap:6px 12px; font-size:12px; margin-top:2px; }
+  .risk-kv dt{ color:var(--muted); }
+  .risk-kv dd{ margin:0; font-family:var(--font-data); text-align:right; }
+
+  .section-h{ display:flex; align-items:baseline; justify-content:space-between; margin:26px 2px 12px; gap:12px; }
+  .section-h h2{ font-size:15px; font-weight:720; letter-spacing:-.01em; }
+  .section-h .hint{ color:var(--muted); font-size:12px; }
+
+  .drivers{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  .driver{ padding:16px; display:flex; flex-direction:column; gap:11px; }
+  .driver .dh{ display:flex; align-items:center; justify-content:space-between; gap:6px; }
+  .driver .dh .name{ font-weight:680; font-size:14px; }
+  .driver .wt{ font-family:var(--font-data); font-size:11px; color:var(--muted); background:var(--panel-2); border:1px solid var(--border-soft); padding:2px 6px; border-radius:6px; }
+  .valrow{ display:flex; align-items:baseline; gap:8px; }
+  .driver .val{ font-family:var(--font-data); font-size:30px; font-weight:700; line-height:1; letter-spacing:-.01em; }
+  .tag{ font-size:11.5px; font-weight:650; padding:2px 8px; border-radius:20px; }
+  .srcbadge{ font-size:10px; font-weight:700; letter-spacing:.04em; padding:2px 7px; border-radius:5px; }
+  .b-auto{ color:var(--pos); background:color-mix(in srgb,var(--pos) 14%,transparent); }
+  .b-manual{ color:var(--accent); background:color-mix(in srgb,var(--accent) 16%,transparent); }
+  .contrib{ height:4px; border-radius:4px; background:var(--raise); overflow:hidden; }
+  .contrib i{ display:block; height:100%; }
+  .driver.unavail{ border-style:dashed; opacity:.9; }
+  .driver .dt{ font-size:11.5px; color:var(--muted); margin:0; line-height:1.55; }
+  .driver .dt b{ color:var(--text); font-family:var(--font-data); font-weight:650; }
+
+  .grid2{ display:grid; grid-template-columns:1fr 1.15fr; gap:16px; }
+  .pad{ padding:18px 20px; }
+
+  .fed-rate{ display:flex; align-items:flex-end; gap:12px; margin:8px 0 2px; }
+  .fed-rate .big{ font-family:var(--font-data); font-size:42px; font-weight:700; line-height:.95; }
+  .fed-rate .range{ color:var(--muted); font-family:var(--font-data); font-size:13px; padding-bottom:6px; }
+  .fomc{ margin-top:14px; padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:var(--panel-2);
+    display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .fomc .cd{ font-family:var(--font-data); font-size:20px; font-weight:700; }
+  .stance{ margin-top:12px; padding:11px 13px; border-radius:9px; background:var(--panel-2); border:1px solid var(--border-soft); font-size:12px; color:var(--muted); line-height:1.6; }
+  .stance b{ color:var(--text); }
+
+  /* 通胀追踪 */
+  .infl{ margin-top:10px; display:flex; flex-direction:column; gap:1px;
+    background:var(--border-soft); border:1px solid var(--border-soft); border-radius:9px; overflow:hidden; }
+  .infl .row{ display:grid; grid-template-columns:1fr auto auto; gap:10px; align-items:center;
+    background:var(--panel-2); padding:9px 12px; font-size:12.5px; }
+  .infl .lab{ display:flex; align-items:center; gap:7px; min-width:0; }
+  .infl .lab span{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .infl .val{ font-family:var(--font-data); font-weight:700; font-size:14px; white-space:nowrap; }
+  .infl .delta{ font-family:var(--font-data); font-size:11px; white-space:nowrap; text-align:right; min-width:96px; }
+  .infl .bar{ grid-column:1/-1; height:3px; border-radius:3px; background:var(--raise); overflow:hidden; margin-top:1px; }
+  .infl .bar i{ display:block; height:100%; }
+  .cool{ color:var(--pos); }
+  .hot{ color:var(--risk-high); }
+  .infl-next{ margin-top:8px; font-size:11.5px; color:var(--muted); display:flex; justify-content:space-between; gap:8px; }
+
+  .econlist{ margin:12px 0 0; padding:0; }
+  .econlist li{ list-style:none; display:grid; grid-template-columns:74px 1fr auto; gap:10px; align-items:baseline;
+    padding:9px 0; border-top:1px solid var(--border-soft); font-size:12.5px; }
+  .econlist li:first-child{ border-top:none; }
+  .econlist .when{ font-family:var(--font-data); font-size:11px; color:var(--faint); }
+  .econlist .ttl{ line-height:1.4; }
+  .econlist .num{ font-family:var(--font-data); font-size:11.5px; text-align:right; white-space:nowrap; }
+  .star{ display:inline-block; font-size:9.5px; font-weight:700; padding:1px 5px; border-radius:4px; margin-left:6px; vertical-align:1px; }
+  .st-HIGH{ color:var(--risk-high); background:color-mix(in srgb,var(--risk-high) 15%,transparent); }
+  .st-MEDIUM{ color:var(--muted); background:var(--raise); }
+
+  .news ul{ margin:10px 0 0; padding:0; }
+  .news li{ list-style:none; padding:12px 0; border-top:1px solid var(--border-soft); display:flex; gap:11px; align-items:flex-start; }
+  .news li:first-child{ border-top:none; }
+  .news .when{ font-family:var(--font-data); font-size:11px; color:var(--faint); white-space:nowrap; min-width:42px; padding-top:2px; }
+  .news .body{ flex:1; min-width:0; }
+  .news .hl{ font-size:13px; font-weight:540; line-height:1.45; }
+  .news .src{ color:var(--muted); font-size:11px; margin-top:3px; }
+  /* 每条新闻的两个评级图标 */
+  .newsmeta{ display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex-shrink:0; }
+  .stars{ display:inline-flex; gap:1.5px; align-items:center; }
+  .stars svg{ width:11px; height:11px; display:block; }
+  .stars.lg svg{ width:17px; height:17px; }
+  /* 利好利空程度：5 格渐变条，当前档高亮 */
+  .impact{ display:inline-flex; gap:2px; align-items:center; }
+  .impact i{ width:7px; height:11px; border-radius:2px; background:var(--raise); display:block; }
+  .impact.lg i{ width:12px; height:16px; border-radius:3px; }
+  .ratelabel{ font-size:9.5px; color:var(--faint); letter-spacing:.04em; }
+  .metarow{ display:flex; align-items:center; gap:5px; }
+
+  .senti{ font-size:11px; font-weight:680; padding:2px 8px; border-radius:20px; white-space:nowrap; }
+  .s-pos{ color:var(--pos); background:color-mix(in srgb,var(--pos) 15%,transparent); }
+  .s-neg{ color:var(--neg); background:color-mix(in srgb,var(--neg) 16%,transparent); }
+  .s-neu{ color:var(--muted); background:var(--panel-2); }
+
+  .tablewrap{ overflow-x:auto; max-height:520px; }
+  table.earn{ width:100%; border-collapse:collapse; font-size:13px; min-width:700px; }
+  table.earn th, table.earn td{ padding:10px 12px; text-align:left; border-bottom:1px solid var(--border-soft); }
+  table.earn th{ color:var(--muted); font-weight:600; font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    position:sticky; top:0; background:var(--panel); z-index:1; }
+  table.earn td.n, table.earn th.n{ text-align:right; }
+  table.earn td.n{ font-family:var(--font-data); }
+  table.earn tr:hover td{ background:var(--panel-2); }
+  .tkr{ font-family:var(--font-data); font-weight:700; }
+  .co{ color:var(--muted); font-size:11.5px; }
+  .pill{ font-size:11px; font-weight:680; padding:2px 8px; border-radius:6px; white-space:nowrap; }
+  .p-beat{ color:var(--pos); background:color-mix(in srgb,var(--pos) 15%,transparent); }
+  .p-miss{ color:var(--risk-high); background:color-mix(in srgb,var(--risk-high) 15%,transparent); }
+  .p-wait{ color:var(--muted); background:var(--panel-2); }
+  .p-susp{ color:var(--accent); background:color-mix(in srgb,var(--accent) 15%,transparent); cursor:help; }
+
+  details.method{ margin-top:24px; }
+  details.method summary{ cursor:pointer; padding:16px 20px; font-weight:680; font-size:14px; list-style:none; display:flex; align-items:center; justify-content:space-between; }
+  details.method summary::-webkit-details-marker{ display:none; }
+  details.method summary::after{ content:"＋"; color:var(--muted); font-family:var(--font-data); }
+  details.method[open] summary::after{ content:"－"; }
+  .method-body{ padding:0 20px 22px; color:var(--muted); font-size:13px; line-height:1.7; }
+  .method-body h4{ color:var(--text); font-size:12.5px; margin:16px 0 6px; }
+  .method-body code{ font-family:var(--font-data); background:var(--panel-2); padding:1px 6px; border-radius:5px; font-size:12px; color:var(--text); }
+  .method-body ul{ margin:6px 0; padding-left:20px; }
+  .method-body li{ margin:5px 0; }
+  .lgd{ display:flex; flex-wrap:wrap; gap:10px 18px; margin-top:8px; }
+  .lgd span{ display:inline-flex; align-items:center; gap:7px; font-size:12px; color:var(--text); }
+  .lgd b{ width:11px;height:11px;border-radius:3px;display:inline-block; }
+  .warn{ border-left:3px solid var(--accent); background:var(--panel-2); padding:10px 13px; border-radius:8px; margin:12px 0; }
+
+  .foot{ margin-top:28px; color:var(--faint); font-size:11.5px; text-align:center; line-height:1.75; }
+
+  @media (max-width:880px){ .hero{grid-template-columns:1fr;} .drivers{grid-template-columns:repeat(2,1fr);} .grid2{grid-template-columns:1fr;} }
+  @media (max-width:520px){ .drivers{grid-template-columns:1fr;} .lvl-num{font-size:48px;} }
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; } }
+</style>
+<style>
+  .langbtn{
+    font:inherit; font-size:12px; font-weight:650; color:var(--muted); cursor:pointer;
+    background:var(--panel); border:1px solid var(--border); border-radius:7px;
+    padding:5px 9px; display:inline-flex; gap:5px; align-items:center;
+  }
+  .langbtn:hover{ color:var(--text); border-color:var(--accent); }
+  .langbtn .on{ color:var(--accent); }
+  .langbtn .off{ color:var(--faint); }
+</style>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="dot"></span>
+      <div>
+        <h1 data-i18n="brandTitle"></h1>
+        <div class="en" data-i18n="brandSub"></div>
+      </div>
+    </div>
+    <div class="meta">
+      <span id="asof" class="mono"></span>
+      <button class="langbtn" id="langbtn" type="button"></button>
+      <button class="themebtn" id="themebtn"></button>
+    </div>
+  </header>
+
+  <div class="prov" id="prov"></div>
+
+  <section class="tickerwrap" id="tickerWrap"></section>
+
+  <section class="card fgcard" id="fgCard"></section>
+
+  <section class="hero">
+    <div class="card verdict">
+      <span class="eyebrow" data-i18n="verdictEyebrow"></span>
+      <div class="lvl-badge">
+        <span class="lvl-num mono" id="lvlNum">–</span>
+        <span class="lvl-of mono">/ 5</span>
+        <span class="lvl-label" id="lvlLabel"></span>
+        <span id="lvlImpact" style="margin-left:2px"></span>
+      </div>
+      <div class="lvl-sub" id="lvlSub"></div>
+      <div class="meter">
+        <div class="track" id="track">
+          <div class="dim l" id="dimL"></div>
+          <div class="dim r" id="dimR"></div>
+          <div class="marker" id="marker" style="left:50%"></div>
+        </div>
+        <div class="scale" id="meterScale"></div>
+      </div>
+      <div class="mono" style="color:var(--muted);font-size:12px">
+        <span data-i18n="compositeLabel"></span>
+        <b id="compScore" style="color:var(--text)"></b>
+        <span style="color:var(--faint)" data-i18n="compositeRange"></span>
+      </div>
+      <div class="spark">
+        <div class="eyebrow" style="margin-bottom:6px" data-i18n="sparkTitle"></div>
+        <div id="sparkBox"></div>
+        <div class="sparkcap" id="sparkCap"></div>
+      </div>
+    </div>
+
+    <div class="card riskcard">
+      <div class="top">
+        <span class="eyebrow" data-i18n="riskEyebrow"></span>
+        <span class="mono" style="color:var(--muted);font-size:11px" data-i18n="riskLowHigh"></span>
+      </div>
+      <div class="risk-headline">
+        <span class="n mono" id="riskNum">–</span>
+        <span class="t" id="riskLabel"></span>
+      </div>
+      <div class="risk-dots" id="riskDots"></div>
+      <div class="risk-note" id="riskNote"></div>
+      <dl class="risk-kv" id="riskKv"></dl>
+    </div>
+  </section>
+
+  <div class="section-h">
+    <h2 data-i18n="driversTitle"></h2>
+    <span class="hint" id="driverHint"></span>
+  </div>
+  <div class="drivers" id="drivers"></div>
+
+  <div class="grid2" style="margin-top:16px">
+    <div class="card pad">
+      <span class="eyebrow" data-i18n="fedEyebrow"></span>
+      <div class="fed-rate">
+        <span class="big" id="fedRate">–</span>
+        <span class="range" id="fedRange"></span>
+      </div>
+      <div class="fomc">
+        <div>
+          <div style="font-size:11px;color:var(--muted)" data-i18n="nextFomc"></div>
+          <div class="mono" style="font-weight:650;margin-top:2px" id="fomcDate"></div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:var(--muted)" data-i18n="countdown"></div>
+          <div class="cd" id="fomcCd"></div>
+        </div>
+      </div>
+      <div class="stance" id="stanceBox"></div>
+
+      <div class="eyebrow" style="margin-top:18px" data-i18n="inflationEyebrow"></div>
+      <div id="inflBox"></div>
+
+      <div class="eyebrow" style="margin-top:16px" data-i18n="econEyebrow"></div>
+      <ul class="econlist" id="econList"></ul>
+    </div>
+
+    <div class="card pad news">
+      <span class="eyebrow" data-i18n="newsEyebrow"></span>
+      <div id="newsLegend" style="margin-top:8px"></div>
+      <ul id="newsList"></ul>
+    </div>
+  </div>
+
+  <div class="section-h" style="margin-top:26px">
+    <h2><span data-i18n="earnTitle"></span>
+      <span class="hint" style="font-weight:400" data-i18n="earnSubtitle"></span></h2>
+    <span class="hint" id="earnStat"></span>
+  </div>
+  <div class="card">
+    <div class="tablewrap">
+      <table class="earn">
+        <thead><tr id="earnHead"></tr></thead>
+        <tbody id="earnBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <details class="method card">
+    <summary data-i18n="methodSummary"></summary>
+    <div class="method-body" id="methodBody"></div>
+  </details>
+
+  <div class="foot" id="foot"></div>
+</div>
+
+<script>
+/*DATA_START*/
+const DATA = null;
+/*DATA_END*/
+
+/* =========================================================================
+   i18n —— 默认英文。所有面向用户的文案集中在这里；
+   数据层生成的文案是 {en, zh} 对象，用 L() 取值。
+   ========================================================================= */
+const I18N = {
+  en: {
+    brandTitle: "Market Risk Cockpit",
+    brandSub: "市场风险驾驶舱",
+    snapshot: "Snapshot",
+    themeBtn: "◐ Theme",
+
+    provSource: "Live from <b>moomoo / Futu OpenD</b>",
+    provSnapshot: "Snapshot", provGenerated: "Generated",
+    provAuto: "<b>{n}/4</b> factors fully automated; the rest are manual inputs with stated sources",
+    provWarn: "{n} fetch warning(s)",
+
+    oilTitle: "Crude Oil",
+    etfProxy: "Live ETF proxy:",
+    treasuryTitle: "Treasury Yields · most recent auction stop-out (%)",
+    treasuryNote: "Futu has no yield index (US.TNX etc. return Unknown stock), so these come from Treasury auction results in the economic calendar. Each tenor was auctioned on a different date (small text below) — this is not a single-day curve snapshot.",
+    badgeAuto: "Auto", badgeManual: "Manual",
+
+    fgEyebrow: "Fear & Greed Index · in-house proxy",
+    fgCnnRef: "CNN official reference",
+    fgAutoComps: "Auto {n}/5 components",
+    fgTick0: "0 Extreme Fear", fgTick50: "50 Neutral", fgTick100: "100 Extreme Greed",
+    fgMissing: "Missing components: {list} — score averages only the {n}/5 available",
+    fgDisclaimer: "Note: this is <b>not</b> the official CNN index. CNN uses 7 components, of which <b>put/call ratio</b> and <b>McClellan breadth</b> are unavailable from OpenD. This page builds a proxy from the 5 components that can be fetched automatically — similar in magnitude, but it will not match the official value. The CNN figure above is a manually entered reference.",
+    fgUnavailable: "Data unavailable",
+
+    verdictEyebrow: "Market Outlook, Next 4–8 Weeks · Composite View",
+    compositeLabel: "Composite score",
+    compositeRange: "(range −100 … +100)",
+    sparkTitle: "SPY · last 60 sessions",
+    scale1: "Strongly Bearish", scale2: "Mod. Bearish", scale3: "Neutral",
+    scale4: "Mod. Bullish", scale5: "Strongly Bullish",
+    sparkInsufficient: "Insufficient kline data",
+
+    riskEyebrow: "Downside Risk Level",
+    riskLowHigh: "1 low · 5 high",
+    riskL1: "Low", riskL2: "Fairly Low", riskL3: "Moderately High", riskL4: "High", riskL5: "Very High",
+    riskN1: "Volatility subdued and the calendar is quiet — drawdown odds are low.",
+    riskN2: "Broadly calm, only isolated event noise. Risk is contained.",
+    riskN3: "Volatility is moderate, but events are stacking up — event-driven pullback risk is rising.",
+    riskN4: "Volatility elevated and the calendar is crowded — defensive sizing and hedges matter more.",
+    riskN5: "Panic and major events are compounding — prioritize drawdown control and cut exposure.",
+    riskVix: "VIX", riskVixProxy: "(proxy)",
+    riskEvtDensity: "Event density", riskSaturated: "(saturated)",
+    riskHighEvt: "High-importance events, next 7d",
+    riskTop30: "Top-30 earnings, next 7d",
+    riskRaw: "Raw risk score",
+
+    driversTitle: "Four Driving Factors",
+    driverHint: "Weighted composite {score}",
+    driverHintRenorm: "<span style='color:var(--accent)'>{n} factor(s) missing — weights renormalized</span> · composite {score}",
+    dWeight: "Weight {pct}%", dContrib: "Contribution {v}",
+    dBullish: "Bullish", dBearish: "Bearish", dNeutral: "Neutral",
+    dNoData: "No data", dOrigWeight: "Original weight {pct}% removed",
+    dEarnNone: "No reported earnings in window",
+    dEarnLine1: "Valid sample <b>{n}</b> · beats <b>{b}</b> · misses <b>{m}</b> (beat rate <b>{r}%</b>)",
+    dEarnLine2: "Cap-weighted average surprise <b>{s}%</b>",
+    dEarnSuspect: "Excluded {n} with suspect basis",
+    dTechLine2: "20d momentum <b>{m}%</b> · 21d realized vol <b>{v}</b>",
+    dFedLine1: "Policy stance <b>{s}</b> (manual) × 0.65",
+    dFedLine2: "Macro surprise <b>{m}</b> (auto) × 0.35",
+    dNewsLine1: "Sample <b>{n}</b> headlines · method: keyword heuristic",
+    dNewsLine2: "Keyword heuristic, not semantic analysis",
+
+    fedEyebrow: "Federal Reserve Policy · FED",
+    fedTargetRange: "Target range {lo}%–{hi}%",
+    nextFomc: "Next FOMC decision", countdown: "Countdown",
+    daysUnit: "{n} days", today: "Today", ended: "Concluded",
+    stanceLabel: "Policy stance {v}", sourceLabel: "Source",
+
+    inflationEyebrow: "Inflation Tracker · distance to 2% target",
+    inflAboveTarget: "above target", inflAtTarget: "at target",
+    inflVsCons: "vs est.", inflVsPrev: "vs prev.",
+    inflInlineCons: "in line with est.", inflInlinePrev: "flat vs prev.",
+    inflLastRelease: "Last release", inflNext: "Next",
+    inflNone: "No released inflation data in window",
+
+    econEyebrow: "High / Medium Importance Macro Calendar",
+    econReleased: "Recently released", econPending: "Pending",
+    econExpected: "Est. {v}", econNone: "No high/medium importance events in window",
+    starHigh: "High", starMid: "Med",
+
+    newsEyebrow: "Major News · rated per headline",
+    legendImpactTitle: "Impact 1–5",
+    legendImpactDesc: "directional strength of the headline (cool blue bearish → warm gold bullish)",
+    legendRiskTitle: "Risk 1–5 stars",
+    legendRiskDesc: "breadth of reach: single-name → macro → systemic (green → red)",
+    legendIndependent: "The two are independent: one stock spiking can be strongly bullish yet carry a very low risk rating.",
+    impact1: "Strongly Bearish", impact2: "Mildly Bearish", impact3: "Neutral",
+    impact4: "Mildly Bullish", impact5: "Strongly Bullish",
+    riskW1: "Very Low", riskW2: "Low", riskW3: "Medium", riskW4: "High", riskW5: "Very High",
+    riskPrefix: "Risk ", newsNone: "No news retrieved",
+
+    earnTitle: "Top 100 Earnings Calendar",
+    earnSubtitle: "· market-cap weighted",
+    thDate: "Date", thSession: "Session", thTicker: "Ticker", thCompany: "Company",
+    thEst: "Est. EPS", thAct: "Act. EPS", thResult: "Result", thMcap: "Mkt Cap", thWeight: "Weight",
+    sesPre: "Pre", sesPost: "Post", sesIntra: "Intraday",
+    capVhigh: "Mega", capHigh: "Large", capMid: "Mid", capLow: "Small",
+    pillBeat: "Beat", pillMiss: "Miss", pillInline: "In line",
+    pillWait: "Pending", pillNoEst: "No est.", pillSuspect: "Suspect basis",
+    suspectTip: "Actual deviates from estimate by more than 100% — usually a currency or GAAP/non-GAAP basis mismatch. Excluded from scoring.",
+    earnStat: "{n} rows · {r} reported · beat rate {p}%",
+
+    methodSummary: "Scoring Methodology · where every number comes from",
+    footLine1: "Data source moomoo / Futu OpenD · snapshot {d} · generated {g}",
+    footLine2: "A structured research framework, not investment advice",
+    noDataInjected: "<b>Template has no data injected</b><br><span style='color:var(--muted);font-size:13px'>Run <code>python3 build_cockpit.py</code> to generate market_cockpit.html</span>",
+  },
+  zh: {
+    brandTitle: "市场风险驾驶舱",
+    brandSub: "Market Risk Cockpit",
+    snapshot: "快照",
+    themeBtn: "◐ 主题",
+
+    provSource: "数据源 <b>moomoo / Futu OpenD</b> 实时拉取",
+    provSnapshot: "快照日", provGenerated: "生成于",
+    provAuto: "<b>{n}/4</b> 因子全自动，其余为标注来源的人工输入",
+    provWarn: "取数告警 {n} 条",
+
+    oilTitle: "原油",
+    etfProxy: "ETF 实时代理：",
+    treasuryTitle: "美债收益率 · 最近一次招标中标利率 (%)",
+    treasuryNote: "Futu 无收益率指数（US.TNX 等报 Unknown stock），此处取经济日历的国债招标结果。各期限招标日不同（下方小字），不是同一天的曲线快照。",
+    badgeAuto: "自动", badgeManual: "人工",
+
+    fgEyebrow: "恐慌贪婪指数 · 自建代理",
+    fgCnnRef: "CNN 官方对照",
+    fgAutoComps: "自动 {n}/5 分项",
+    fgTick0: "0 极度恐慌", fgTick50: "50 中性", fgTick100: "100 极度贪婪",
+    fgMissing: "缺失分项 {list} —— 总分仅对 {n}/5 个可用分项取平均",
+    fgDisclaimer: "注：这<b>不是</b> CNN 官方指数。CNN 用 7 个分项，其中<b>看跌看涨期权比率</b>与 <b>McClellan 广度指标</b> OpenD 无法取得，故本页用 5 个可自动取数的分项自建代理，量级接近但不会与官方值一致。上方 CNN 数字为人工填入的对照参考。",
+    fgUnavailable: "数据不可用",
+
+    verdictEyebrow: "未来 4–8 周市场预期 · 综合研判",
+    compositeLabel: "综合分",
+    compositeRange: "（区间 −100 … +100）",
+    sparkTitle: "SPY 近 60 交易日",
+    scale1: "极度看空", scale2: "谨慎看空", scale3: "中性",
+    scale4: "谨慎看多", scale5: "强烈看多",
+    sparkInsufficient: "K 线数据不足",
+
+    riskEyebrow: "下行风险等级",
+    riskLowHigh: "1 低 · 5 高",
+    riskL1: "低", riskL2: "偏低", riskL3: "中等偏高", riskL4: "高", riskL5: "极高",
+    riskN1: "波动率低位、日程平静，回撤概率小，可正常持仓。",
+    riskN2: "环境总体平稳，仅个别事件扰动，风险可控。",
+    riskN3: "波动率中枢温和，但事件叠加，事件性回撤风险上升。",
+    riskN4: "波动放大且日程密集，防守性仓位与对冲更重要。",
+    riskN5: "恐慌情绪与重大事件共振，优先控制回撤、降低敞口。",
+    riskVix: "VIX", riskVixProxy: "（代理值）",
+    riskEvtDensity: "事件密集度", riskSaturated: "（已饱和）",
+    riskHighEvt: "未来7日高重要事件",
+    riskTop30: "未来7日 Top30 财报",
+    riskRaw: "风险原始分",
+
+    driversTitle: "四大驱动因子",
+    driverHint: "加权合成综合分 {score}",
+    driverHintRenorm: "<span style='color:var(--accent)'>{n} 个因子缺失，权重已重新归一化</span> · 综合分 {score}",
+    dWeight: "权重 {pct}%", dContrib: "贡献 {v}",
+    dBullish: "利多", dBearish: "利空", dNeutral: "中性",
+    dNoData: "数据缺失", dOrigWeight: "原权重 {pct}% 已剔除",
+    dEarnNone: "窗口内尚无已公布财报",
+    dEarnLine1: "有效样本 <b>{n}</b> 家 · 超预期 <b>{b}</b> · 不及 <b>{m}</b>（超预期率 <b>{r}%</b>）",
+    dEarnLine2: "市值加权平均超预期 <b>{s}%</b>",
+    dEarnSuspect: "剔除口径存疑 {n} 家",
+    dTechLine2: "20日动量 <b>{m}%</b> · 21日已实现波动率 <b>{v}</b>",
+    dFedLine1: "政策立场 <b>{s}</b>（人工）× 0.65",
+    dFedLine2: "宏观意外 <b>{m}</b>（自动）× 0.35",
+    dNewsLine1: "样本 <b>{n}</b> 条 · 方法：关键词启发式",
+    dNewsLine2: "关键词启发式，非语义分析",
+
+    fedEyebrow: "美联储货币政策 · FED",
+    fedTargetRange: "目标区间 {lo}%–{hi}%",
+    nextFomc: "下次 FOMC 决议", countdown: "倒计时",
+    daysUnit: "{n} 天", today: "今日", ended: "已结束",
+    stanceLabel: "政策立场 {v}", sourceLabel: "来源",
+
+    inflationEyebrow: "通胀追踪 · 距 2% 目标",
+    inflAboveTarget: "高于目标", inflAtTarget: "达标",
+    inflVsCons: "vs 预期", inflVsPrev: "vs 前值",
+    inflInlineCons: "持平预期", inflInlinePrev: "持平前值",
+    inflLastRelease: "最近公布", inflNext: "下次",
+    inflNone: "窗口内无已公布通胀数据",
+
+    econEyebrow: "高/中重要度宏观日程",
+    econReleased: "近期已公布", econPending: "待公布",
+    econExpected: "预期 {v}", econNone: "窗口内无高/中重要度事件",
+    starHigh: "高", starMid: "中",
+
+    newsEyebrow: "重大新闻 · 逐条评级",
+    legendImpactTitle: "利好利空程度 1–5",
+    legendImpactDesc: "消息自身方向强度（冷蓝利空 → 暖金利好）",
+    legendRiskTitle: "风险 1–5 星",
+    legendRiskDesc: "波及面：个体 → 宏观 → 系统性（绿 → 红）",
+    legendIndependent: "两者独立：单只股票暴涨可以是强利好但风险星级很低。",
+    impact1: "强利空", impact2: "偏利空", impact3: "中性",
+    impact4: "偏利好", impact5: "强利好",
+    riskW1: "很低", riskW2: "低", riskW3: "中", riskW4: "高", riskW5: "很高",
+    riskPrefix: "风险", newsNone: "未取到新闻",
+
+    earnTitle: "Top100 财报日历",
+    earnSubtitle: "· 按市值加权",
+    thDate: "日期", thSession: "时段", thTicker: "代码", thCompany: "公司",
+    thEst: "预期 EPS", thAct: "实际 EPS", thResult: "结果", thMcap: "市值", thWeight: "权重",
+    sesPre: "盘前", sesPost: "盘后", sesIntra: "盘中",
+    capVhigh: "极高", capHigh: "高", capMid: "中", capLow: "低",
+    pillBeat: "超预期", pillMiss: "不及", pillInline: "符合预期",
+    pillWait: "待公布", pillNoEst: "无预期", pillSuspect: "口径存疑",
+    suspectTip: "实际与预期偏离超过 100%，多为币种或 GAAP/non-GAAP 口径不一致，已排除出计分",
+    earnStat: "表内 {n} 家 · 已公布 {r} 家 · 超预期率 {p}%",
+
+    methodSummary: "评分方法论 · 每个数字从哪来",
+    footLine1: "数据源 moomoo / Futu OpenD · 快照 {d} · 生成于 {g}",
+    footLine2: "评分为结构化研判框架，不构成投资建议",
+    noDataInjected: "<b>模板未注入数据</b><br><span style='color:var(--muted);font-size:13px'>请运行 <code>python3 build_cockpit.py</code> 生成 market_cockpit.html</span>",
+  },
+};
+
+/* 默认英文；读取上次选择（沙箱可能禁用 storage，故 try/catch） */
+let LANG = "en";
+try {
+  const saved = localStorage.getItem("cockpit_lang");
+  if (saved === "zh" || saved === "en") LANG = saved;
+} catch (e) { /* storage 不可用则保持默认 */ }
+
+/** 取 i18n 文案，支持 {var} 占位 */
+function t(key, vars) {
+  let s = (I18N[LANG] && I18N[LANG][key]) ?? I18N.en[key] ?? key;
+  if (vars) for (const k in vars) s = s.split("{" + k + "}").join(vars[k]);
+  return s;
+}
+/** 取数据层的双语对象 */
+function L(v) {
+  if (v == null) return "";
+  if (typeof v === "object") return v[LANG] ?? v.en ?? "";
+  return v;
+}
+
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const fmtCap=(v)=> v==null?"—": v>=1e12?(v/1e12).toFixed(2)+"T": v>=1e9?(v/1e9).toFixed(0)+"B": (v/1e6).toFixed(0)+"M";
+const dirColor=(s)=> s>=60?"var(--l5)": s>=20?"var(--l4)": s>-20?"var(--l3)": s>-60?"var(--l2)":"var(--l1)";
+const esc=(s)=> String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const RISK_COLORS=['var(--r1)','var(--r2)','var(--r3)','var(--r4)','var(--r5)'];
+const LVL_COLORS =['var(--l1)','var(--l2)','var(--l3)','var(--l4)','var(--l5)'];
+const riskWord=(n)=>t('riskW'+clamp(n,1,5));
+const impactWord=(n)=>t('impact'+clamp(n,1,5));
+const STAR_PATH='M8 1.2l2.05 4.3 4.7.65-3.45 3.3.87 4.65L8 11.9l-4.17 2.2.87-4.65L1.25 6.15l4.7-.65z';
+
+/* ---------- 静态文案填充 ---------- */
+function applyStatic(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    el.innerHTML = t(el.getAttribute('data-i18n'));
+  });
+  document.getElementById('themebtn').textContent = t('themeBtn');
+  document.getElementById('langbtn').innerHTML =
+    `<span class="${LANG==='en'?'on':'off'}">EN</span>`+
+    `<span style="color:var(--faint)">/</span>`+
+    `<span class="${LANG==='zh'?'on':'off'}">中</span>`;
+  document.getElementById('meterScale').innerHTML =
+    [1,2,3,4,5].map(i=>`<span>${t('scale'+i)}</span>`).join('');
+  document.getElementById('earnHead').innerHTML =
+    ['thDate','thSession','thTicker','thCompany'].map(k=>`<th>${t(k)}</th>`).join('')+
+    `<th class="n">${t('thEst')}</th><th class="n">${t('thAct')}</th>`+
+    `<th>${t('thResult')}</th><th class="n">${t('thMcap')}</th><th>${t('thWeight')}</th>`;
+  document.documentElement.lang = LANG === 'zh' ? 'zh-CN' : 'en';
+}
+
+/* ---------- 评级图标 ---------- */
+// 星形用内联 SVG 而不是 ⭐️ emoji：emoji 颜色固定，无法随风险等级做绿→红渐变
+function starsHtml(level, size){
+  const L2=clamp(level,1,5), col=RISK_COLORS[L2-1];
+  let s=`<span class="stars${size==='lg'?' lg':''}" role="img" aria-label="${t('riskPrefix')} ${L2}/5 ${riskWord(L2)}">`;
+  for(let i=1;i<=5;i++){
+    const on=i<=L2;
+    s+=`<svg viewBox="0 0 16 16" aria-hidden="true"><path d="${STAR_PATH}"
+        fill="${on?col:'none'}" stroke="${on?col:'var(--border)'}" stroke-width="${on?0:1.2}"/></svg>`;
+  }
+  return s+'</span>';
+}
+// 利好利空程度：5 格色阶，当前档实心、其余留底，颜色取全局 5 级渐变
+function impactHtml(level, size){
+  const L2=clamp(level,1,5);
+  let s=`<span class="impact${size==='lg'?' lg':''}" role="img" aria-label="${t('legendImpactTitle')} ${L2}/5 ${impactWord(L2)}">`;
+  for(let i=1;i<=5;i++){
+    const on=i===L2;
+    s+=`<i style="background:${LVL_COLORS[i-1]};opacity:${on?1:.22};${
+      on?'box-shadow:0 0 0 1.5px color-mix(in srgb,'+LVL_COLORS[i-1]+' 55%,transparent)':''}"></i>`;
+  }
+  return s+'</span>';
+}
+
+/* ---------- provenance ---------- */
+function renderProv(){
+  const auto=DATA.drivers.filter(d=>d.auto).length;
+  const errs=(DATA.errors&&DATA.errors.length)
+    ? `<span class="sep">·</span><span style="color:var(--accent)">${t('provWarn',{n:DATA.errors.length})}</span>`:'';
+  document.getElementById('prov').innerHTML=`
+    <span>${t('provSource')}</span><span class="sep">·</span>
+    <span>${t('provSnapshot')} <b class="mono">${esc(DATA.asOf)}</b></span><span class="sep">·</span>
+    <span>${t('provGenerated')} <b class="mono">${esc(DATA.generatedAt)}</b></span><span class="sep">·</span>
+    <span>${t('provAuto',{n:auto})}</span>${errs}`;
+}
+
+/* ---------- 顶部实时行情条 ---------- */
+function chgCls(v){ return v==null?'flat': v>0.02?'up': v<-0.02?'down':'flat'; }
+function fmtChg(v){ return v==null?'—':`${v>0?'+':''}${v.toFixed(2)}%`; }
+
+function renderTicker(){
+  const el=document.getElementById('tickerWrap');
+  const tk=DATA.ticker||[], oil=DATA.oilSpot||{}, curve=DATA.treasuryCurve||[];
+  if(!tk.length && !curve.length){ el.innerHTML=''; return; }
+
+  const tiles=tk.map(x=>`<div class="tk">
+      <div class="sym">${esc(x.label)}</div>
+      <div class="px">${x.last!=null?x.last.toFixed(2):'—'}</div>
+      <div class="ch ${chgCls(x.chg)}">${fmtChg(x.chg)}</div>
+      <div class="ds">${esc(L(x.desc))}</div>
+    </div>`).join('');
+
+  // 油价：真实报价是人工维护的，ETF 涨跌幅才是自动的 —— 必须分清标注
+  const uso=tk.find(x=>x.label==='USO'), bno=tk.find(x=>x.label==='BNO');
+  const oilbox=(oil.brent!=null||oil.wti!=null)?`<div class="oilbox">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span class="eyebrow">${t('oilTitle')}</span>
+        <span class="srcbadge b-manual">${t('badgeManual')}</span>
+      </div>
+      <div class="oilrow">
+        ${oil.brent!=null?`<div class="o"><span class="on">Brent</span>
+          <span class="ov">$${oil.brent.toFixed(2)}</span></div>`:''}
+        ${oil.wti!=null?`<div class="o"><span class="on">WTI</span>
+          <span class="ov">$${oil.wti.toFixed(2)}</span></div>`:''}
+      </div>
+      <div style="font-size:9.5px;color:var(--faint);margin-top:7px;line-height:1.5">
+        ${esc(L(oil.source))}<br>${t('etfProxy')}
+        ${uso?`USO <span class="${chgCls(uso.chg)}">${fmtChg(uso.chg)}</span>`:''}
+        ${bno?` · BNO <span class="${chgCls(bno.chg)}">${fmtChg(bno.chg)}</span>`:''}
+      </div>
+    </div>`:'';
+
+  // 美债曲线：来自国债招标中标收益率。各期限招标日不同，必须逐个标出日期。
+  let curvebox='';
+  if(curve.length){
+    const ys=curve.map(c=>c.yield), lo=Math.min(...ys), hi=Math.max(...ys);
+    const bars=curve.map(c=>{
+      const bh=8+((c.yield-lo)/((hi-lo)||1))*26;
+      const col=c.years<=1?'var(--l2)': c.years<=7?'var(--l3)':'var(--l4)';
+      return `<div class="c" title="${esc(L(c.tenor))} ${c.yield.toFixed(3)}% · ${esc(c.date)}">
+        <span class="cy" style="color:${col}">${c.yield.toFixed(2)}</span>
+        <span class="cb" style="height:${bh}px;background:${col}"></span>
+        <span class="ct">${esc(L(c.tenor))}</span>
+        <span class="cd">${esc(c.date)}</span>
+      </div>`;
+    }).join('');
+    curvebox=`<div class="curvebox">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span class="eyebrow">${t('treasuryTitle')}</span>
+        <span class="srcbadge b-auto">${t('badgeAuto')}</span>
+      </div>
+      <div class="curve">${bars}</div>
+      <div style="font-size:9.5px;color:var(--faint);margin-top:6px">${t('treasuryNote')}</div>
+    </div>`;
+  }
+  el.innerHTML=`<div class="tickers">${tiles}</div>
+    ${(oilbox||curvebox)?`<div class="macrorow">${oilbox}${curvebox}</div>`:''}`;
+}
+
+/* ---------- 恐慌贪婪指数 ---------- */
+function fgColor(v){
+  return v>=75?'var(--l5)': v>=55?'var(--l4)': v>=45?'var(--l3)': v>=25?'var(--l2)':'var(--l1)';
+}
+function renderFearGreed(){
+  const el=document.getElementById('fgCard'), fg=DATA.fearGreed;
+  if(!fg || fg.score==null){
+    el.innerHTML=`<div style="padding:16px 20px">
+      <span class="eyebrow">${t('fgEyebrow')}</span>
+      <div style="color:var(--accent);font-size:13px;margin-top:6px">
+        ${esc(L(fg&&fg.note)||t('fgUnavailable'))}</div></div>`;
+    return;
+  }
+  const col=fgColor(fg.score), cnn=fg.cnnReference;
+  const comps=fg.components.map(c=>{
+    const cc=fgColor(c.value);
+    return `<div class="fgcomp">
+      <div class="cn">${esc(L(c.name))}</div>
+      <div class="cv" style="color:${cc}">${c.value}</div>
+      <div class="cbar"><i style="width:${clamp(c.value,0,100)}%;background:${cc}"></i></div>
+      <div class="cd">${esc(L(c.detail))}</div></div>`;
+  }).join('');
+  const missNote=(fg.missing&&fg.missing.length)
+    ? `<div style="font-size:11px;color:var(--accent);margin-top:10px">${
+        t('fgMissing',{list:fg.missing.map(m=>esc(L(m))).join('、'),n:fg.componentCount})}</div>`
+    : '';
+  el.innerHTML=`
+    <div class="fgtop">
+      <div>
+        <span class="eyebrow">${t('fgEyebrow')}</span>
+        <div class="fgmain" style="margin-top:10px">
+          <span class="fgnum" style="color:${col}">${fg.score}</span>
+          <span class="fgof">/ 100</span>
+          <span class="fgzone" style="color:${col}">${esc(L(fg.zone))}</span>
+        </div>
+      </div>
+      <div class="fgref">
+        ${cnn!=null?`${t('fgCnnRef')} <b>${cnn}</b><br>
+          <span style="color:var(--faint)">${esc(L(fg.cnnSource))}</span><br>`:''}
+        <span class="srcbadge b-auto" style="margin-top:4px;display:inline-block">${
+          t('fgAutoComps',{n:fg.componentCount})}</span>
+      </div>
+    </div>
+    <div class="fgscale">
+      <div class="bar"></div>
+      <div class="pin" style="left:${clamp(fg.score,1,99)}%"></div>
+      ${cnn!=null?`<div class="cnnpin" style="left:${clamp(cnn,1,99)}%"></div>
+        <div class="cnnlbl" style="left:${clamp(cnn,1,99)}%">CNN ${cnn}</div>`:''}
+      <div class="fgticks" style="margin-top:${cnn!=null?'34px':'7px'}">
+        <span>${t('fgTick0')}</span><span>25</span><span>${t('fgTick50')}</span>
+        <span>75</span><span>${t('fgTick100')}</span>
+      </div>
+    </div>
+    <div class="fgcomps">${comps}</div>${missNote}
+    <div style="font-size:10.5px;color:var(--faint);margin-top:12px;line-height:1.6">${t('fgDisclaimer')}</div>`;
+}
+
+/* ---------- hero ---------- */
+function renderVerdict(){
+  const Lv=DATA.level, c=dirColor(DATA.composite);
+  document.getElementById('lvlNum').textContent=Lv.n;
+  document.getElementById('lvlNum').style.color=c;
+  document.getElementById('lvlLabel').textContent=L(Lv.label);
+  document.getElementById('lvlLabel').style.color=c;
+  document.getElementById('lvlSub').textContent=L(Lv.sub);
+  document.getElementById('compScore').textContent=(DATA.composite>0?'+':'')+DATA.composite;
+  document.getElementById('dimL').style.right=(100-(Lv.n-1)*20)+'%';
+  document.getElementById('dimR').style.left=(Lv.n*20)+'%';
+  document.getElementById('marker').style.left=clamp((DATA.composite+100)/200*100,2,98)+'%';
+  document.getElementById('lvlImpact').innerHTML=impactHtml(Lv.n,'lg');
+}
+
+function renderSpark(){
+  const d=DATA.spark||[];
+  if(d.length<2){
+    document.getElementById('sparkBox').innerHTML=
+      `<div style="color:var(--faint);font-size:12px">${t('sparkInsufficient')}</div>`;
+    document.getElementById('sparkCap').innerHTML=''; return;
+  }
+  const W=560,H=52,P=2;
+  const mn=Math.min(...d), mx=Math.max(...d), rng=(mx-mn)||1;
+  const x=i=>P+i*(W-2*P)/(d.length-1), y=v=>H-P-((v-mn)/rng)*(H-2*P);
+  const line=d.map((v,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
+  const up=d[d.length-1]>=d[0], col=up?'var(--pos)':'var(--neg)';
+  document.getElementById('sparkBox').innerHTML=`
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${t('sparkTitle')}">
+      <path d="${line}L${x(d.length-1).toFixed(1)},${H}L${x(0).toFixed(1)},${H}Z" fill="${col}" opacity=".13"/>
+      <path d="${line}" fill="none" stroke="${col}" stroke-width="1.6" stroke-linejoin="round"/>
+      <circle cx="${x(d.length-1).toFixed(1)}" cy="${y(d[d.length-1]).toFixed(1)}" r="2.8" fill="${col}"/>
+    </svg>`;
+  const pct=((d[d.length-1]/d[0]-1)*100).toFixed(1);
+  document.getElementById('sparkCap').innerHTML=
+    `<span class="mono">${mn.toFixed(0)}</span>
+     <span class="mono" style="color:${col}">${d[d.length-1].toFixed(2)} (${pct>0?'+':''}${pct}%)</span>`;
+}
+
+function renderRisk(){
+  const R=DATA.risk;
+  const colors={1:"var(--risk-low)",2:"var(--risk-low)",3:"var(--risk-mid)",4:"var(--risk-high)",5:"var(--risk-high)"};
+  document.getElementById('riskNum').textContent=R.level;
+  document.getElementById('riskNum').style.color=colors[R.level];
+  document.getElementById('riskLabel').textContent=t('riskL'+R.level);
+  document.getElementById('riskNote').textContent=t('riskN'+R.level);
+  // 与新闻行同一套视觉语言：风险一律用星级
+  document.getElementById('riskDots').innerHTML=starsHtml(R.level,'lg');
+  const ed=R.eventDetail||{};
+  const sat=R.eventDensity>=100?` <span style="color:var(--accent)">${t('riskSaturated')}</span>`:'';
+  document.getElementById('riskKv').innerHTML=`
+    <dt>${t('riskVix')} ${R.vixIsProxy?`<span style="color:var(--accent)">${t('riskVixProxy')}</span>`:''}</dt><dd>${R.vix}</dd>
+    <dt>${t('riskEvtDensity')}</dt><dd>${R.eventDensity}${sat}</dd>
+    <dt>${t('riskHighEvt')}</dt><dd>${ed.high_econ_7d??'—'}</dd>
+    <dt>${t('riskTop30')}</dt><dd>${ed.top30_earnings_7d??'—'}</dd>
+    <dt>${t('riskRaw')}</dt><dd>${R.score}</dd>`;
+}
+
+/* ---------- drivers ---------- */
+function driverDetailHtml(d){
+  const x=d.detail||{};
+  if(d.key==='earnings'){
+    if(!x.reported) return t('dEarnNone');
+    const susp=x.suspect
+      ? `<br><span style="color:var(--accent)">${t('dEarnSuspect',{n:x.suspect})}${
+          x.suspect_names&&x.suspect_names.length?' ('+x.suspect_names.map(esc).join(', ')+')':''}</span>`:'';
+    return t('dEarnLine1',{n:x.reported,b:x.beats,m:x.misses,r:x.beat_rate})+'<br>'+
+           t('dEarnLine2',{s:x.avg_surprise_pct})+susp;
+  }
+  if(d.key==='technical'){
+    if(x.unavailable||x.note) return esc(L(x.note));
+    return `SPY <b>${x.last}</b> · MA50 <b>${x.ma50}</b> ${x.above_ma50?'↑':'↓'} · MA200 <b>${x.ma200}</b> ${x.above_ma200?'↑':'↓'}<br>`+
+           t('dTechLine2',{m:x.mom20_pct,v:x.rv21});
+  }
+  if(d.key==='fed'){
+    return t('dFedLine1',{s:(x.stance>0?'+':'')+x.stance})+'<br>'+
+           t('dFedLine2',{m:(x.macroSurprise>0?'+':'')+x.macroSurprise});
+  }
+  if(d.key==='news'){
+    return t('dNewsLine1',{n:x.count})+
+           `<br><span style="color:var(--accent)">${t('dNewsLine2')}</span>`;
+  }
+  return '';
+}
+
+function renderDrivers(){
+  const el=document.getElementById('drivers'); el.innerHTML='';
+  DATA.drivers.forEach(d=>{
+    const div=document.createElement('div'); div.className='card driver';
+    const badge=d.auto
+      ? `<span class="srcbadge b-auto">${t('badgeAuto')}</span>`
+      : `<span class="srcbadge b-manual">${t('badgeManual')}</span>`;
+    // 因子不可用时绝不显示成 0 —— 0 会被读成"中性判断"，
+    // 而事实是"这个因子没有数据"。两者在决策上完全不同。
+    if(d.score==null){
+      div.classList.add('unavail');
+      div.innerHTML=`
+        <div class="dh"><span class="name">${esc(L(d.name))}</span>${badge}</div>
+        <div class="valrow"><span class="val" style="color:var(--faint)">n/a</span>
+          <span class="tag s-neu">${t('dNoData')}</span></div>
+        <div class="contrib"><i style="width:0"></i></div>
+        <div class="dh"><span class="wt">${t('dOrigWeight',{pct:Math.round((d.baseWeight??0)*100)})}</span></div>
+        <p class="dt" style="color:var(--accent)">${driverDetailHtml(d)}</p>`;
+      el.appendChild(div); return;
+    }
+    const col=dirColor(d.score);
+    const tag=d.score>=20?t('dBullish'): d.score<=-20?t('dBearish'):t('dNeutral');
+    const tcls=d.score>=20?"s-pos": d.score<=-20?"s-neg":"s-neu";
+    const contrib=Math.abs(d.score)*d.weight;
+    const rew=DATA.weightsRenormalized && d.baseWeight!=null && Math.abs(d.weight-d.baseWeight)>1e-6;
+    div.innerHTML=`
+      <div class="dh"><span class="name">${esc(L(d.name))}</span>${badge}</div>
+      <div class="valrow">
+        <span class="val" style="color:${col}">${d.score>0?'+':''}${d.score}</span>
+        <span class="tag ${tcls}">${tag}</span>
+      </div>
+      <div class="contrib"><i style="width:${contrib/30*100}%;background:${col}"></i></div>
+      <div class="dh">
+        <span class="wt">${t('dWeight',{pct:Math.round(d.weight*100)})}${
+          rew?` <span style="color:var(--accent)">↑${Math.round(d.baseWeight*100)}%</span>`:''}</span>
+        <span class="wt">${t('dContrib',{v:(d.score*d.weight>0?'+':'')+(d.score*d.weight).toFixed(1)})}</span>
+      </div>
+      <p class="dt">${driverDetailHtml(d)}</p>`;
+    el.appendChild(div);
+  });
+  const score=(DATA.composite>0?'+':'')+DATA.composite;
+  document.getElementById('driverHint').innerHTML = DATA.weightsRenormalized
+    ? t('driverHintRenorm',{n:DATA.missingFactors.length,score})
+    : t('driverHint',{score});
+}
+
+/* ---------- fed / inflation / econ ---------- */
+function renderFed(){
+  const f=DATA.drivers.find(d=>d.key==='fed').detail;
+  document.getElementById('fedRate').textContent=f.rateLow.toFixed(2);
+  document.getElementById('fedRange').textContent=
+    t('fedTargetRange',{lo:f.rateLow.toFixed(2),hi:f.rateHigh.toFixed(2)});
+  document.getElementById('fomcDate').textContent=f.nextFOMC;
+  const days=Math.round((new Date(f.nextFOMC)-new Date(DATA.asOf))/864e5);
+  document.getElementById('fomcCd').textContent=
+    days<0?t('ended'): days===0?t('today'): t('daysUnit',{n:days});
+  document.getElementById('stanceBox').innerHTML=
+    `<b>${t('stanceLabel',{v:(f.stance>0?'+':'')+f.stance})}</b>
+     <span class="srcbadge b-manual">${t('badgeManual')}</span><br>
+     ${esc(L(f.stanceReason))}<br>
+     <span style="color:var(--faint)">${t('sourceLabel')}: ${esc(L(f.source))}</span>`;
+}
+
+function renderInflation(){
+  const box=document.getElementById('inflBox');
+  const inf=DATA.inflation||{}, rows=inf.latest||[];
+  if(!rows.length){
+    box.innerHTML=`<div style="color:var(--faint);font-size:12px;margin-top:8px">${t('inflNone')}</div>`;
+    return;
+  }
+  const html=rows.map(r=>{
+    const vc=r.vs_consensus, vp=r.vs_previous;
+    const vcTxt = vc==null?'' : vc===0
+      ? `<span style="color:var(--muted)">${t('inflInlineCons')}</span>`
+      : `<span class="${vc<0?'cool':'hot'}">${vc>0?'+':''}${vc} ${t('inflVsCons')}</span>`;
+    const vpTxt = vp==null?'' : vp===0
+      ? `<span style="color:var(--faint)"> · ${t('inflInlinePrev')}</span>`
+      : `<span style="color:var(--faint)"> · ${vp>0?'+':''}${vp} ${t('inflVsPrev')}</span>`;
+    let bar='';
+    if(r.target!=null && r.actual!=null){
+      const pct=clamp(r.actual/(r.target*2.5)*100,0,100);
+      const col=r.actual>r.target*1.5?'var(--risk-high)': r.actual>r.target?'var(--accent)':'var(--pos)';
+      bar=`<div class="bar"><i style="width:${pct}%;background:${col}"></i></div>`;
+    }
+    const flag = r.above_target===true
+      ? `<span class="star st-HIGH" style="margin:0">${t('inflAboveTarget')}</span>`
+      : r.above_target===false ? `<span class="star st-MEDIUM" style="margin:0">${t('inflAtTarget')}</span>` : '';
+    return `<div class="row">
+        <span class="lab"><span>${esc(L(r.label))}</span>${flag}</span>
+        <span class="val">${r.actual}%</span>
+        <span class="delta">${vcTxt}${vpTxt}</span>${bar}
+      </div>`;
+  }).join('');
+  const dates=[...new Set(rows.map(r=>r.date))].sort();
+  box.innerHTML=`<div class="infl">${html}</div>
+    <div class="infl-next">
+      <span>${t('inflLastRelease')} <b class="mono" style="color:var(--text)">${esc(dates[dates.length-1]||'—')}</b></span>
+      ${inf.next_release?`<span>${t('inflNext')} <b class="mono" style="color:var(--text)">${esc(inf.next_release)}</b></span>`:''}
+    </div>`;
+}
+
+function renderEcon(){
+  const ul=document.getElementById('econList'); ul.innerHTML='';
+  const rows=DATA.econ||[]; let inserted=false;
+  rows.forEach(e=>{
+    if(!e.upcoming && !inserted){
+      inserted=true;
+      const sep=document.createElement('li');
+      sep.style.cssText='display:block;padding:12px 0 4px;border-top:1px solid var(--border)';
+      sep.innerHTML=`<span class="eyebrow">${t('econReleased')}</span>`;
+      ul.appendChild(sep);
+    }
+    const li=document.createElement('li');
+    if(!e.upcoming) li.style.opacity='.72';
+    const num = e.actual
+      ? `<b style="color:var(--text)">${esc(e.actual)}</b>${e.consensus?` <span style="color:var(--faint)">vs ${esc(e.consensus)}</span>`:''}`
+      : (e.consensus? `<span style="color:var(--faint)">${t('econExpected',{v:esc(e.consensus)})}</span>`
+                    : `<span style="color:var(--faint)">${t('econPending')}</span>`);
+    li.innerHTML=`<span class="when">${esc(e.date)}</span>
+      <span class="ttl">${esc(e.title)}<span class="star st-${esc(e.star)}">${
+        e.star==='HIGH'?t('starHigh'):t('starMid')}</span></span>
+      <span class="num">${num}</span>`;
+    ul.appendChild(li);
+  });
+  if(!ul.children.length) ul.innerHTML=`<li style="color:var(--faint)">${t('econNone')}</li>`;
+}
+
+/* ---------- news ---------- */
+function renderNewsLegend(){
+  // 两个维度容易被读成一回事，图例明确说清它们各自衡量什么
+  document.getElementById('newsLegend').innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:5px;padding:9px 11px;
+      background:var(--panel-2);border:1px solid var(--border-soft);border-radius:8px;font-size:11px;color:var(--muted)">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="display:inline-flex;gap:2px">
+          <i style="width:7px;height:11px;border-radius:2px;background:var(--l1);display:block"></i>
+          <i style="width:7px;height:11px;border-radius:2px;background:var(--l3);display:block"></i>
+          <i style="width:7px;height:11px;border-radius:2px;background:var(--l5);display:block"></i>
+        </span>
+        <span><b style="color:var(--text)">${t('legendImpactTitle')}</b> ${t('legendImpactDesc')}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        ${starsHtml(3)}
+        <span><b style="color:var(--text)">${t('legendRiskTitle')}</b> ${t('legendRiskDesc')}</span>
+      </div>
+      <div style="color:var(--faint);padding-top:1px">${t('legendIndependent')}</div>
+    </div>`;
+}
+
+function renderNews(){
+  const ul=document.getElementById('newsList'); ul.innerHTML='';
+  (DATA.news||[]).forEach(n=>{
+    const li=document.createElement('li');
+    const hl = n.url? `<a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.hl)}</a>` : esc(n.hl);
+    const im=clamp(n.impact??3,1,5), rk=clamp(n.risk??1,1,5);
+    li.innerHTML=`<span class="when">${esc(n.when)}</span>
+      <div class="body"><div class="hl">${hl}</div><div class="src">${esc(n.src||'')}</div></div>
+      <div class="newsmeta">
+        <div class="metarow">${impactHtml(im)}<span class="ratelabel"
+          style="color:${LVL_COLORS[im-1]}">${impactWord(im)}</span></div>
+        <div class="metarow">${starsHtml(rk)}<span class="ratelabel">${t('riskPrefix')}${riskWord(rk)}</span></div>
+      </div>`;
+    ul.appendChild(li);
+  });
+  if(!ul.children.length) ul.innerHTML=`<li style="color:var(--faint)">${t('newsNone')}</li>`;
+}
+
+/* ---------- earnings ---------- */
+function renderEarnings(){
+  const tb=document.getElementById('earnBody'); tb.innerHTML='';
+  let rep=0, beats=0;
+  const wcol={vhigh:'var(--l5)',high:'var(--l4)',mid:'var(--l3)',low:'var(--faint)'};
+  const wtxt={vhigh:t('capVhigh'),high:t('capHigh'),mid:t('capMid'),low:t('capLow')};
+  const stxt={pre:t('sesPre'),post:t('sesPost'),intra:t('sesIntra')};
+  (DATA.earnings||[]).forEach(e=>{
+    let pill, actCol='var(--text)';
+    switch(e.kind){
+      case 'beat': rep++; beats++;
+        pill=`<span class="pill p-beat">${t('pillBeat')}</span>`; actCol='var(--pos)'; break;
+      case 'miss': rep++;
+        pill=`<span class="pill p-miss">${t('pillMiss')}</span>`; actCol='var(--risk-high)'; break;
+      case 'inline': rep++;
+        pill=`<span class="pill p-wait">${t('pillInline')}</span>`; break;
+      case 'suspect':
+        pill=`<span class="pill p-susp" title="${t('suspectTip')}">${t('pillSuspect')}</span>`;
+        actCol='var(--accent)'; break;
+      default:
+        pill=`<span class="pill p-wait">${e.est==null?t('pillNoEst'):t('pillWait')}</span>`;
+    }
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td class="mono" style="font-size:12px">${esc(e.date.slice(5))}</td>
+      <td style="color:var(--muted);font-size:12px">${esc(stxt[e.session]||e.session)}</td>
+      <td><span class="tkr">${esc(e.tk)}</span></td>
+      <td class="co">${esc(e.co)}</td>
+      <td class="n">${e.est!=null?e.est.toFixed(2):'—'}</td>
+      <td class="n" style="color:${actCol}">${e.act!=null?e.act.toFixed(2):'—'}</td>
+      <td>${pill}</td>
+      <td class="n" style="color:var(--muted);font-size:12px">${fmtCap(e.mcap)}</td>
+      <td><span style="color:${wcol[e.w]};font-size:12px;font-weight:600">${esc(wtxt[e.w]||e.w)}</span></td>`;
+    tb.appendChild(tr);
+  });
+  document.getElementById('earnStat').textContent=t('earnStat',
+    {n:(DATA.earnings||[]).length, r:rep, p:rep?Math.round(beats/rep*100):0});
+}
+
+/* ---------- methodology ---------- */
+function renderMethod(){
+  const auto=`<span class="srcbadge b-auto">${t('badgeAuto')}</span>`;
+  const man=`<span class="srcbadge b-manual">${t('badgeManual')}</span>`;
+  const lgd=`<div class="lgd">${[1,2,3,4,5].map(i=>
+    `<span><b style="background:var(--l${i})"></b>${i} ${t('scale'+i)}</span>`).join('')}</div>`;
+  const en=`
+    <div class="warn"><b style="color:var(--text)">Provenance rule</b><br>
+      Every factor card is tagged ${auto} or ${man}. "Auto" means it is pulled live from
+      moomoo / Futu OpenD and computed here; "Manual" means it cannot be derived from the API
+      and is maintained by hand, with its reasoning and source printed on the page.
+      A number with no stated provenance does not belong on this page.</div>
+    <h4>1 · Composite score → 5 levels</h4>
+    <p><code>S = 0.30·Fed + 0.30·Earnings + 0.20·News + 0.20·Technical</code>, each factor in −100…+100.</p>
+    <ul><li><code>S ≤ −60</code> → 1 · <code>−60…−20</code> → 2 · <code>−20…+20</code> → 3
+      · <code>+20…+60</code> → 4 · <code>S ≥ +60</code> → 5</li></ul>${lgd}
+    <h4>2 · Risk level (independent of direction)</h4>
+    <p>Bullish does not mean low risk. <code>Risk = volatility × 0.6 + event density × 0.4</code>,
+      where event density combines high-importance macro events and Top-30 earnings in the next 7 days.
+      "Bullish + high risk" means participate with reduced size; "bearish + high risk" means defense first.</p>
+    <h4>3 · How each factor is sourced</h4>
+    <ul>
+      <li><b>Top 100 Earnings</b> ${auto} <code>get_earnings_calendar</code>. Universe is the 100
+        largest by market cap among companies reporting in the window; EPS surprise weighted by
+        <code>√market cap</code> and capped at ±25%.</li>
+      <li><b>Technical Sentiment</b> ${auto} <code>subscribe</code> + <code>get_cur_kline</code> on SPY;
+        equal blend of price vs MA50, price vs MA200, and 20-day momentum.</li>
+      <li><b>Macro surprise / Inflation</b> ${auto} <code>get_economic_calendar</code>,
+        <code>actual</code> vs <code>consensus</code>. Hot inflation and rising unemployment score negative.</li>
+      <li><b>Major News</b> ${auto} <code>get_search_news</code>.
+        <b style="color:var(--accent)">Caveat:</b> sentiment is a keyword-and-phrase heuristic, not
+        semantic analysis; it misreads irony and complex constructions. Treat it as a rough sort.</li>
+      <li><b>Fed policy stance</b> ${man} Dot plot, voter rhetoric and market-implied paths are not in
+        OpenD, so this is maintained by hand — the reasoning appears in the Policy Stance box above.
+        Fed factor = stance × 0.65 + macro surprise × 0.35.</li>
+      <li><b>VIX</b> ${man} Futu cannot return the VIX index (<code>US.VIX</code> → Unknown stock);
+        only the VIXY futures ETF exists. Leave it empty and the page falls back to SPY 21-day
+        realized volatility, labelled as a proxy.</li>
+      <li><b>Crude oil</b> ${man} No futures or spot feed — only USO / BNO ETFs, which track futures
+        and carry roll decay, so they are <b>not</b> the oil price. ETF percentage moves are automatic;
+        the headline Brent/WTI quotes are entered by hand with a date.</li>
+      <li><b>Treasury yields</b> ${auto} No yield index, so the curve is built from Treasury
+        <b>auction stop-out yields</b> in the economic calendar. Each tenor was auctioned on a
+        different date, shown beneath each bar — it is not a single-day curve.</li>
+    </ul>
+    <h4>4 · Known limits</h4>
+    <ul>
+      <li>Both calendar endpoints cap a request at 7 days, and the economic calendar's
+        <code>next_page</code> cursor is timestamp-based and silently drops events that share a
+        timestamp. The fetcher bisects date windows instead of paging.</li>
+      <li>The economic calendar pre-fills <code>actual</code> for unreleased events, so release
+        status is decided strictly by timestamp, never by whether a value is present.</li>
+      <li>Earnings consensus uses Futu's basis, which can differ from other vendors.</li>
+      <li>News sources themselves contain errors (observed: Chair Warsh printed as Powell,
+        Hammack as Harker). Verify names against primary sources.</li>
+      <li><b>This is a research framework, not a forecasting model, and not investment advice.</b></li>
+    </ul>`;
+  const zh=`
+    <div class="warn"><b style="color:var(--text)">数据出处原则</b><br>
+      每个因子卡片都带 ${auto} 或 ${man} 标记。「自动」= 由 moomoo / Futu OpenD 接口实时拉取并计算；
+      「人工」= 无法从接口推导、需手工维护的判断值，其依据与来源直接显示在页面上。
+      任何没有出处的数字都不应出现在这个页面上。</div>
+    <h4>1 · 综合分 → 5 级映射</h4>
+    <p><code>S = 0.30·Fed + 0.30·财报 + 0.20·新闻 + 0.20·技术面</code>，各因子取值 −100…+100。</p>
+    <ul><li><code>S ≤ −60</code> → 1 级 · <code>−60…−20</code> → 2 级 · <code>−20…+20</code> → 3 级
+      · <code>+20…+60</code> → 4 级 · <code>S ≥ +60</code> → 5 级</li></ul>${lgd}
+    <h4>2 · 风险等级（独立于方向）</h4>
+    <p>方向看多不等于低风险。<code>风险分 = 波动率 × 0.6 + 事件密集度 × 0.4</code>，
+      事件密集度由未来 7 天的高重要度宏观事件数与 Top30 市值公司财报数合成。
+      「看多 + 高风险」= 可参与但控仓；「看空 + 高风险」= 防守优先。</p>
+    <h4>3 · 各因子取数路径</h4>
+    <ul>
+      <li><b>Top100 财报</b> ${auto} <code>get_earnings_calendar</code>。口径为「窗口内有财报的公司中
+        市值最大的 100 家」，按 <code>√市值</code> 加权 EPS 超预期幅度（截断 ±25%）。</li>
+      <li><b>技术面情绪</b> ${auto} <code>subscribe</code> + <code>get_cur_kline</code> 取 SPY 日线，
+        由「相对 MA50 / 相对 MA200 / 20 日动量」等权合成。</li>
+      <li><b>宏观意外 / 通胀</b> ${auto} <code>get_economic_calendar</code> 的
+        <code>actual</code> vs <code>consensus</code>。通胀、失业率高于预期记利空。</li>
+      <li><b>重大新闻</b> ${auto} <code>get_search_news</code>。
+        <b style="color:var(--accent)">注意：</b>情绪判定是关键词与短语启发式，不是语义分析，
+        会误判反讽与复杂句式，仅作粗略排序参考。</li>
+      <li><b>Fed 政策立场</b> ${man} 点阵图、票委表态、市场隐含路径无法从 OpenD 获得，须手工维护，
+        依据显示在上方「政策立场」框内。Fed 因子 = 立场分 × 0.65 + 宏观意外 × 0.35。</li>
+      <li><b>VIX</b> ${man} Futu 取不到 VIX 指数（<code>US.VIX</code> 报 Unknown stock），
+        只有 VIXY 期货 ETF。留空则自动降级为 SPY 21 日已实现波动率，页面会标注「代理值」。</li>
+      <li><b>原油</b> ${man} 无期货/现货源，只有 USO / BNO 这类 ETF（跟踪期货、有滚动损耗），
+        <b>不等于油价</b>。ETF 涨跌幅是自动的，Brent/WTI 真实报价须手工填入并注明日期。</li>
+      <li><b>美债收益率</b> ${auto} 无收益率指数，改从经济日历取国债<b>招标中标收益率</b>构建曲线。
+        各期限招标日不同（显示在每根柱下方），不是同一天的曲线快照。</li>
+    </ul>
+    <h4>4 · 已知局限</h4>
+    <ul>
+      <li>两个日历接口单次跨度上限 7 天；且经济日历的 <code>next_page</code> 游标基于时间戳，
+        会静默丢掉同一时刻的事件，故取数改用日期窗口递归二分而非翻页。</li>
+      <li>经济日历会给未发布事件预填 <code>actual</code>，因此发布状态严格按时间戳判定，
+        绝不依据「有没有值」。</li>
+      <li>财报一致预期用 Futu 口径，与其他数据商可能有差异。</li>
+      <li>新闻源本身也会出错（实测见到把主席 Warsh 写成 Powell、Hammack 写成 Harker）。
+        票委名单等关键事实请以一手来源为准。</li>
+      <li><b>这是研判框架，不是预测模型，不构成投资建议。</b></li>
+    </ul>`;
+  document.getElementById('methodBody').innerHTML = LANG==='zh'?zh:en;
+}
+
+/* ---------- 全量渲染 ---------- */
+function renderAll(){
+  applyStatic();
+  if(!DATA) return;
+  document.getElementById('asof').textContent=t('snapshot')+' '+DATA.asOf;
+  renderProv(); renderTicker(); renderFearGreed(); renderVerdict(); renderSpark();
+  renderRisk(); renderDrivers(); renderFed(); renderInflation(); renderEcon();
+  renderNewsLegend(); renderNews(); renderEarnings(); renderMethod();
+  document.getElementById('foot').innerHTML=
+    t('footLine1',{d:esc(DATA.asOf),g:esc(DATA.generatedAt)})+'<br>'+t('footLine2');
+}
+
+/* ---------- 控件 ---------- */
+document.getElementById('themebtn').addEventListener('click',()=>{
+  const cur=document.documentElement.getAttribute('data-theme');
+  const isDark = cur? cur==='dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-theme', isDark?'light':'dark');
+});
+document.getElementById('langbtn').addEventListener('click',()=>{
+  LANG = LANG==='en' ? 'zh' : 'en';
+  try{ localStorage.setItem('cockpit_lang', LANG); }catch(e){ /* 忽略 */ }
+  renderAll();
+});
+
+/* ---------- init ---------- */
+if(!DATA){
+  applyStatic();
+  document.querySelector('.wrap').innerHTML=
+    `<div class="card" style="margin-top:40px;padding:18px 20px">${t('noDataInjected')}</div>`;
+} else {
+  renderAll();
+}
+</script>
