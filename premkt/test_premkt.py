@@ -56,6 +56,9 @@ ET = ZoneInfo("America/New_York")
     ("Moderna & Merck Stocks Skyrocket on Their Cancer Vaccine Trial's Success", 1),
     ("Biotech announces successful Phase 3 trial in NSCLC", 1),
     ("XYZ hits primary endpoint in pivotal study", 1),
+    # 2026-08-25 实盘漏判：RZLV +21% 靠拿下 Google，旧词典只认 "partnership"
+    ("Google Selects Rezolve AI's Proprietary Distributed Database Platform", 1),
+    ("Acme's platform selected by a major cloud provider", 1),
     ("Acme Announces Quarterly Cash Dividend", 0),
 ])
 def test_headline_direction(title, expect_sign):
